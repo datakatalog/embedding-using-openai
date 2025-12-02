@@ -50,7 +50,10 @@ python 03-vector_database.py
 - Re-running keeps the persisted data; delete `chroma_db/` if you want a clean start.
 
 
-### `04-hybrid_search.py`
+### Hybrid FAISS + Elasticsearch semantic search
+```pwsh
+python 04-hybrid_search.py
+```
 A **hybrid semantic search pipeline** combining:
 
 - OpenAI Embeddings (`text-embedding-3-small`)
