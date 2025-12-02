@@ -80,24 +80,26 @@ Ini penerangan ringkas tentang vector DB.
 
 Running Elasticsearch (Required for 04-hybrid_search.py)
 ✔ Recommended: Run Elasticsearch via Docker
-
+```pwsh
 docker run --name es-dev -p 9200:9200 ^
   -e "discovery.type=single-node" ^
   -e "xpack.security.enabled=false" ^
   docker.elastic.co/elasticsearch/elasticsearch:8.15.0
+```
 
 PowerShell backtick version:
-
+```pwsh
 docker run --name es-dev `
   -p 9200:9200 `
   -e "discovery.type=single-node" `
   -e "xpack.security.enabled=false" `
   docker.elastic.co/elasticsearch/elasticsearch:8.15.0
-
+```
 After first run:
+```pwsh
 docker start es-dev
 docker stop es-dev
-
+```
 ---
 
 ## Notes
