@@ -7,3 +7,8 @@ seaborn
 plotly
 chromadb
 tiktoken
+
+# ==== Added for Hybrid Elasticsearch + FAISS ====
+faiss-cpu
+elasticsearch>=8.15.0,<9.0.0
+requests
