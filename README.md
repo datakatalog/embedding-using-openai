@@ -66,6 +66,7 @@ Flow:
 6. Run hybrid ANN search and display top-K results
 
 **Example Output:**
+```pwsh
 [OK] Connected to Elasticsearch cluster: docker-cluster
 Query: macam mana guna FAISS untuk vector search?
 
@@ -77,7 +78,7 @@ Teknik scaling, sharding dan replication untuk vector search.
 
 [3] Pengenalan Vector Database (id=doc-1, distance=0.98)
 Ini penerangan ringkas tentang vector DB.
-
+```
 Running Elasticsearch (Required for 04-hybrid_search.py)
 ✔ Recommended: Run Elasticsearch via Docker
 ```pwsh
