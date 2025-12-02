@@ -42,3 +42,11 @@ chromadb/
 *.msgpack
 *.lock
 *.chroma
+
+# Ignore all files inside data folder
+data/*
+!data/.gitkeep
+
+# FAISS index files (jika nanti simpan lokal)
+*.index
+*.faiss
