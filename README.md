@@ -80,6 +80,7 @@ Teknik scaling, sharding dan replication untuk vector search.
 Ini penerangan ringkas tentang vector DB.
 ```
 Running Elasticsearch (Required for 04-hybrid_search.py)
+
 ✔ Recommended: Run Elasticsearch via Docker
 ```pwsh
 docker run --name es-dev -p 9200:9200 ^
