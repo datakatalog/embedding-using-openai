@@ -130,6 +130,8 @@ def build_netflix_text(item: dict) -> str:
         f"Year: {item['release_year']}"
     )
 
+client.delete_collection("netflix_collection")
+
 netflix_collection = client.get_or_create_collection(
     name="netflix_collection",
     embedding_function=embedding_fn,
@@ -171,4 +173,83 @@ print("\n=== NETFLIX RECOMMENDATION RESULT ===")
 for i, doc in enumerate(result["documents"][0]):
     meta = result["metadatas"][0][i]
     dist = result["distances"][0][i]
+    # fallback kalau metadata tiada / None
+    if isinstance(meta, dict) and "title" in meta:
+        title = meta["title"]
+    else:
+        # ambil line pertama dari dokumen sebagai title sementara
+        title = doc.split("\n")[0]
     print(f"{i+1}. {meta['title']}  (distance={dist:.4f})")
+
+
+# =========================
+# EXAMPLE: UPDATE DOCUMENT
+# =========================
+print("\n--- UPDATE EXAMPLE ---")
+
+netflix_collection.update(
+    ids=["s6"],  # id dokumen yang nak diubah
+    documents=[
+        "Title: La La Land (Movie)\n"
+        "Description: An updated description about a jazz pianist and an actress "
+        "chasing their dreams in Los Angeles while dealing with love and sacrifice.\n"
+        "Categories: Musicals, Romantic Movies\n"
+        "Type: Movie\n"
+        "Year: 2016"
+    ],
+)
+
+updated = netflix_collection.get(ids=["s6"])
+print("Updated doc for s6:")
+print(updated["documents"][0][0])
+
+# =========================
+# EXAMPLE: UPSERT DOCUMENTS
+# =========================
+print("\n--- UPSERT EXAMPLE ---")
+
+netflix_collection.upsert(
+    ids=["s1", "s7"],
+    documents=[
+        # s1: Kota Factory (updated text)
+        "Title: Kota Factory (TV Show)\n"
+        "Description: Updated text – a black-and-white series about students in a "
+        "coaching centre preparing for India's toughest engineering exams.\n"
+        "Categories: International TV Shows, TV Dramas\n"
+        "Type: TV Show\n"
+        "Year: 2019",
+
+        # s7: new show/movie – contoh baru
+        "Title: Sing (Movie)\n"
+        "Description: A group of animals compete in a singing contest to save a theatre.\n"
+        "Categories: Kids' Movies, Musicals\n"
+        "Type: Movie\n"
+        "Year: 2016",
+    ],
+)
+
+print("Total docs after upsert:", netflix_collection.count())
+
+# =========================
+# EXAMPLE: DELETE BY IDS
+# =========================
+print("\n--- DELETE EXAMPLE ---")
+
+before = netflix_collection.count()
+netflix_collection.delete(ids=["s5"])
+after = netflix_collection.count()
+
+print(f"Deleted id 's5'. Count before: {before}, after: {after}")
+
+print("\nPEEK RESULT:")
+print(peek)
+
+# =========================
+# DANGER ZONE: RESET DB
+# =========================
+# WARNING: ini akan buang SEMUA collection & dokumen dalam ChromaDB!
+# Uncomment kalau betul-betul nak reset.
+#
+# print("\n!!! RESETTING ENTIRE CHROMA DB !!!")
+# client.reset()
+# print("All collections & items deleted.")
