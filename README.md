@@ -22,7 +22,8 @@ Hands-on scripts for generating OpenAI text embeddings, visualising them, and us
 ---
 
 📁 Repository Map (Improved & Organized)
-
+<!-- START: REPO_MAP -->
+```text
 embedding-using-openai/
 │
 ├─ 01-embedding_intro.py
@@ -71,8 +72,8 @@ embedding-using-openai/
 ├─ requirements.txt
 │
 └─ README.md
-
-
+```
+<!-- REPO_MAP_END -->
 
 ## Requirements
 - Python 3.10+
