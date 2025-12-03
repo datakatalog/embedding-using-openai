@@ -21,6 +21,59 @@ Hands-on scripts for generating OpenAI text embeddings, visualising them, and us
 - `data/` — Folder dokumen ingestion (ignored by Git).
 ---
 
+📁 Repository Map (Improved & Organized)
+
+embedding-using-openai/
+│
+├─ 01-embedding_intro.py
+│    └─ Generate embedding asas & tunjuk token usage.
+│
+├─ 02-tsne.py
+│    └─ Visualisasi embedding (t-SNE) + cosine similarity search.
+│
+├─ 03-vector_database.py
+│    └─ Chroma local vector DB:
+│         - Create collection
+│         - Insert documents + Netflix dataset
+│         - Perform semantic search
+│
+├─ 04-hybrid_search.py
+│    └─ Hybrid Search Pipeline:
+│         - FAISS (ANN search)
+│         - Elasticsearch (metadata + text)
+│         - Gabungan hybrid scoring
+│
+├─ 05-rag_search.py
+│    └─ Mini RAG (dokumen hard-coded):
+│         - FAISS retrieval
+│         - Elasticsearch document store
+│         - Jawapan BM + citation ringkas
+│
+├─ 06-rag_from_files.py
+│    └─ RAG dari dokumen dalam folder `data/`:
+│         - Baca semua .txt
+│         - Chunking auto
+│         - Index ke Elasticsearch + FAISS
+│         - Jawapan RAG lengkap + citation file
+│
+├─ 07-rag_api.py
+│    └─ FastAPI RAG API:
+│         - Auto-ingest folder `data/`
+│         - Build FAISS index on startup
+│         - Expose endpoint:
+│             GET /health
+│             POST /ask
+│
+├─ data/
+│    ├─ .gitkeep
+│    └─ *.txt   (ignored by Git)
+│
+├─ requirements.txt
+│
+└─ README.md
+
+
+
 ## Requirements
 - Python 3.10+
 - An active OpenAI API key in a `.env` file (`OPENAI_API_KEY=...`)
