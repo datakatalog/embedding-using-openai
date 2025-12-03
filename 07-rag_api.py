@@ -1,6 +1,6 @@
 import os
 import glob
-from typing import List, Dict
+from typing import List, Dict, Optional
 
 import numpy as np
 import faiss
@@ -8,6 +8,8 @@ from dotenv import load_dotenv
 from openai import OpenAI
 from elasticsearch import Elasticsearch, helpers
 from elasticsearch import exceptions as es_exceptions
+from fastapi import FastAPI, HTTPException
+from pydantic import BaseModel
 
 # =========================
 # 1. CONFIG & CLIENT SETUP
@@ -16,13 +18,17 @@ from elasticsearch import exceptions as es_exceptions
 load_dotenv()
 
 ES_HOST = "http://localhost:9200"
-ES_INDEX = "documents_files"   # index khas untuk dokumen dari folder
+ES_INDEX = "documents_files"   # Sama seperti 06-rag_from_files.py
 EMBEDDING_DIM = 1536           # text-embedding-3-small
 TOP_K = 3
 DATA_FOLDER = "data"
 
 client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 es = Elasticsearch(ES_HOST)
+
+# Global state untuk API
+faiss_index: Optional[faiss.Index] = None
+id_map: Optional[Dict[int, str]] = None
 
 
 # =========================
@@ -180,7 +186,7 @@ def index_documents_to_es(docs: List[Dict]):
 # =========================
 
 def build_faiss_index(docs: List[Dict]):
-    """Build FAISS index from docs' content and return (index, id_map, docs_by_id)."""
+    """Build FAISS index from docs' content and return (index, id_map)."""
     if not docs:
         raise ValueError("Tiada dokumen untuk dibina FAISS index.")
 
@@ -189,8 +195,7 @@ def build_faiss_index(docs: List[Dict]):
 
     faiss_ids = []
     vectors = []
-    id_map = {}
-    docs_by_id = {}
+    local_id_map: Dict[int, str] = {}
 
     print("[INFO] Menjana embedding untuk dokumen...")
 
@@ -198,15 +203,14 @@ def build_faiss_index(docs: List[Dict]):
         vec = get_embedding(doc["content"])
         vectors.append(vec)
         faiss_ids.append(internal_id)
-        id_map[internal_id] = doc["id"]
-        docs_by_id[doc["id"]] = doc
+        local_id_map[internal_id] = doc["id"]
 
     vectors_np = np.vstack(vectors).astype("float32")
     faiss_ids_np = np.array(faiss_ids, dtype="int64")
     index_with_ids.add_with_ids(vectors_np, faiss_ids_np)
 
     print(f"[OK] FAISS index dibina untuk {len(docs)} dokumen.")
-    return index_with_ids, id_map, docs_by_id
+    return index_with_ids, local_id_map
 
 
 # =========================
@@ -244,17 +248,18 @@ def retrieve_docs(query: str, faiss_index, id_map, top_k: int = TOP_K) -> List[D
 
 
 # =========================
-# 7. GENERATION LAYER (RAG)
+# 7. GENERATION LAYER (RAG) DENGAN CITATION
 # =========================
 
 def answer_question(question: str, retrieved_docs: List[Dict]) -> str:
-    """Guna OpenAI untuk jawab soalan berdasarkan dokumen yang ditemui."""
+    """Guna OpenAI untuk jawab soalan berdasarkan dokumen yang ditemui, dengan citation fail asal."""
     if not retrieved_docs:
         return (
             "Maaf, saya tidak menjumpai sebarang dokumen yang relevan untuk soalan ini. "
             "Sila pastikan dokumen telah dimuat naik ke folder 'data' dan berkaitan dengan soalan."
         )
 
+    # Bina konteks untuk RAG
     context_parts = []
     for i, doc in enumerate(retrieved_docs, start=1):
         context_parts.append(
@@ -266,8 +271,8 @@ def answer_question(question: str, retrieved_docs: List[Dict]) -> str:
     system_prompt = (
         "Anda adalah pembantu teknikal yang menjawab soalan berdasarkan dokumen rasmi "
         "dalam folder 'data'. Jawapan hendaklah dalam Bahasa Melayu yang jelas, "
-        "ringkas dan sesuai untuk pegawai kerajaan di Malaysia. Jika maklumat tidak cukup, "
-        "nyatakan dengan jujur."
+        "ringkas dan sesuai untuk pegawai kerajaan di Malaysia. "
+        "Jika maklumat tidak cukup, nyatakan dengan jujur."
     )
 
     user_prompt = (
@@ -300,42 +305,81 @@ def answer_question(question: str, retrieved_docs: List[Dict]) -> str:
 
 
 # =========================
-# 8. MAIN DEMO
+# 8. FASTAPI SETUP
 # =========================
 
-def main():
+app = FastAPI(
+    title="RAG API (Elasticsearch + FAISS + OpenAI)",
+    description="API ringkas untuk tanya soalan berdasarkan dokumen dalam folder 'data/'.",
+    version="0.1.0",
+)
+
+
+class AskRequest(BaseModel):
+    question: str
+
+
+class Source(BaseModel):
+    title: str
+    source_file: str
+    doc_id: str
+    distance: float
+
+
+class AskResponse(BaseModel):
+    answer: str
+    sources: List[Source]
+
+
+@app.on_event("startup")
+def startup_event():
+    """Inisialisasi sekali sahaja bila API start."""
+    global faiss_index, id_map
+
+    print("=== STARTUP: Initializing RAG engine ===")
     check_es_connection()
     create_es_index()
 
-    # 1) Load dokumen dari folder data/
     docs = load_documents_from_folder(DATA_FOLDER, max_chars_per_chunk=1200)
     if not docs:
-        print("[STOP] Tiada dokumen dimuatkan. Letak fail .txt dalam folder 'data' dan cuba lagi.")
+        print("[WARN] Tiada dokumen dalam folder 'data'. API masih hidup, tapi jawapan mungkin sentiasa kosong.")
         return
 
-    # 2) Index ke Elasticsearch
     index_documents_to_es(docs)
+    faiss_index, id_map = build_faiss_index(docs)
+    print("=== STARTUP: RAG engine siap digunakan ===")
 
-    # 3) Bina FAISS index
-    faiss_index, id_map, docs_by_id = build_faiss_index(docs)
 
-    print("\n=== RAG DEMO DARI FOLDER 'data/' ===")
-    question = "Apakah prinsip utama dalam perkongsian data antara agensi?"
-    print(f"Soalan: {question}\n")
+@app.get("/health")
+def health_check():
+    """Endpoint ringkas untuk check API hidup."""
+    return {"status": "ok", "faiss_ready": faiss_index is not None}
 
-    retrieved = retrieve_docs(question, faiss_index, id_map, top_k=TOP_K)
 
-    print("Dokumen yang ditemui:")
-    for i, doc in enumerate(retrieved, start=1):
-        print(
-            f"[{i}] {doc['title']} "
-            f"(id={doc['doc_id']}, fail={doc['source_file']}, distance={doc['score']:.4f})"
+@app.post("/ask", response_model=AskResponse)
+def ask_question(payload: AskRequest):
+    """Terima soalan, pulangkan jawapan + senarai sumber dokumen."""
+    if faiss_index is None or id_map is None:
+        raise HTTPException(
+            status_code=503,
+            detail="RAG engine belum siap. Pastikan terdapat dokumen dalam folder 'data' dan restart API."
         )
 
-    print("\nJawapan model:\n")
+    question = payload.question.strip()
+    if not question:
+        raise HTTPException(status_code=400, detail="Soalan tidak boleh kosong.")
+
+    retrieved = retrieve_docs(question, faiss_index, id_map, top_k=TOP_K)
     answer = answer_question(question, retrieved)
-    print(answer)
 
+    sources = [
+        Source(
+            title=doc["title"],
+            source_file=doc["source_file"],
+            doc_id=doc["doc_id"],
+            distance=doc["score"],
+        )
+        for doc in retrieved
+    ]
 
-if __name__ == "__main__":
-    main()
+    return AskResponse(answer=answer, sources=sources)

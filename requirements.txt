@@ -12,3 +12,7 @@ tiktoken
 faiss-cpu
 elasticsearch>=8.15.0,<9.0.0
 requests
+
+
+fastapi
+uvicorn[standard]

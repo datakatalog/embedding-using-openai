@@ -1,15 +1,24 @@
 # Embedding Using OpenAI
 
-Hands-on scripts for generating OpenAI text embeddings, visualising them, and using them inside a simple Chroma vector database (with a small Netflix-style dataset).
+Hands-on scripts for generating OpenAI text embeddings, visualising them, and using them inside vector search & RAG pipelines:
+
+- Chroma (local vector DB)
+- Hybrid FAISS + Elasticsearch
+- RAG (Retrieval-Augmented Generation) from local files
+- FastAPI RAG API for integration dengan Laravel / Angular / portal dalaman
 
 ---
 
-## Repository Map
+## 📁 Repository Map
 - `01-embedding_intro.py` - create a single embedding for a sentence and print token usage.
 - `02-tsne.py` - embed sample news headlines, project them to 2D with t-SNE, and run a cosine-similarity search for a query term.
 - `03-vector_database.py` - build a persistent Chroma collection, add sample docs plus the Netflix dataset from `netflix_data.py`, run semantic search, and estimate embedding cost.
 - `netflix_data.py` - curated titles, descriptions, categories, and release years used to seed Chroma.
-
+- `04-hybrid_search.py` — Hybrid FAISS + Elasticsearch.
+- `05-rag_search.py` — Mini RAG (dokumen hard-coded).
+- `06-rag_from_files.py` — RAG dari folder `data/` (chunking + indexing).
+- `07-rag_api.py` — FastAPI RAG API (endpoint `/ask` dan `/health`).
+- `data/` — Folder dokumen ingestion (ignored by Git).
 ---
 
 ## Requirements
@@ -50,7 +59,7 @@ python 03-vector_database.py
 - Re-running keeps the persisted data; delete `chroma_db/` if you want a clean start.
 
 
-### Hybrid FAISS + Elasticsearch semantic search
+### 4) Hybrid FAISS + Elasticsearch semantic search
 ```pwsh
 python 04-hybrid_search.py
 ```

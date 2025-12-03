@@ -244,7 +244,19 @@ def answer_question(question: str, retrieved_docs: List[Dict]) -> str:
         temperature=0.3,
     )
 
-    return resp.choices[0].message.content.strip()
+    jawapan = resp.choices[0].message.content.strip()
+
+    # Tambah citation di hujung jawapan
+    citation_lines = []
+    for i, doc in enumerate(retrieved_docs, start=1):
+        citation_lines.append(
+            f"- [{i}] {doc['title']} (id: {doc['doc_id']})"
+        )
+
+    citation_block = "Rujukan dokumen:\n" + "\n".join(citation_lines)
+
+    return f"{jawapan}\n\n{citation_block}"
+
 
 
 # =========================
@@ -258,10 +270,25 @@ def main():
     faiss_index, id_map = build_faiss_index(documents)
 
     print("\n=== RAG DEMO ===")
+    question = "Macam mana FAISS dan Elasticsearch boleh digabungkan untuk chatbot RAG di agensi kerajaan?"
+    #uncommnet utk test jawapan di luar konteks
+    #question = "Macam mana nak masak ketupat palas?"
+    print(f"Soalan: {question}\n")
+
+    retrieved = retrieve_docs(question, faiss_index, id_map, top_k=TOP_K)
+
+    print("Dokumen yang ditemui:")
+    for i, doc in enumerate(retrieved, start=1):
+        print(f"[{i}] {doc['title']} (id={doc['doc_id']}, distance={doc['score']:.4f})")
+
+    print("\nJawapan model:\n")
+    answer = answer_question(question, retrieved)
+    print(answer)
+
     #question = "Macam mana FAISS dan Elasticsearch boleh digabungkan untuk chatbot RAG di agensi kerajaan?"
     #uncommnet utk test jawapan di luar konteks
     question = "Macam mana nak masak ketupat palas?"
-    print(f"Soalan: {question}\n")
+    print(f"Soalan Tidak Bekaitan: {question}\n")
 
     retrieved = retrieve_docs(question, faiss_index, id_map, top_k=TOP_K)
 
